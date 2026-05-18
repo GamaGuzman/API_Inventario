@@ -1,0 +1,30 @@
+<section class="products-section">
+
+  <div class="products-header">
+    <h1>Productos</h1>
+    <p>Explora nuestros productos disponibles</p>
+  </div>
+
+  @if (products.length === 0) {
+
+    <div class="empty-state">
+      <p>Sin productos disponibles.</p>
+    </div>
+
+  } @else {
+
+    <div class="products-grid">
+
+      @for (product of products; track product.id) {
+
+        <app-product-card
+          [product]="product">
+        </app-product-card>
+
+      }
+
+    </div>
+
+  }
+
+</section>

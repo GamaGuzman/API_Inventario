@@ -1,0 +1,19 @@
+<div class="product-card"
+[ngClass]="(product?.stock ?? -1) > 0
+              ? ''
+              : 'agotado'">
+
+  <a routerLink="/products/{{product?.id}}">
+
+    <div class="image-container">
+      <img src="{{product?.imagen_url}}"
+          alt="{{product?.titulo + ' image'}}">
+    </div>
+
+    <h2>{{product?.titulo}}</h2>
+
+    <p><strong>$ {{product?.precio}}</strong></p>
+
+  </a>
+
+</div>

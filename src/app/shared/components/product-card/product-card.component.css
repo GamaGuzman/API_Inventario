@@ -1,0 +1,17 @@
+.image-container {
+  width: 200px;
+  aspect-ratio: 4 / 5;
+  background-color: #f3f4f6;
+  overflow: hidden;
+}
+
+.image-container img {
+  width: 200px;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.agotado {
+  opacity: 0.5;
+}
