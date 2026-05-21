@@ -1,0 +1,42 @@
+{
+  "titulo": "Audífonos Inalámbricos Pro",
+  "descripcion": "Audífonos con cancelación de ruido activa y 30 horas de batería autónoma.",
+  "precio": 89.99,
+  "stock": 50,
+  "imagen_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e"
+}
+{
+  "titulo": "Teclado Mecánico RGB",
+  "descripcion": "Teclado layout español con switches tipo Blue, ideal para programar y jugar.",
+  "precio": 45.50,
+  "stock": 15,
+  "imagen_url": "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef"
+}
+{
+  "titulo": "Mouse Ergonómico Vertical",
+  "descripcion": "Mouse inalámbrico diseñado para reducir la tensión muscular y prevenir el túnel carpiano.",
+  "precio": 29.99,
+  "stock": 25,
+  "imagen_url": "https://images.unsplash.com/photo-1234567890123-mouse-vertical"
+}
+{
+  "titulo": "Termo Inteligente Acero Inoxidable",
+  "descripcion": "Termo de 500ml con pantalla LED táctil que muestra la temperatura exacta del agua.",
+  "precio": 19.99,
+  "stock": 100,
+  "imagen_url": "https://images.unsplash.com/photo-1602143407151-7111542de6e8"
+}
+{
+  "titulo": "¡Última Unidad! Consola Retro",
+  "descripcion": "Mini consola con 500 juegos clásicos de 8 bits incluidos. Ideal para nostalgia.",
+  "precio": 35.00,
+  "stock": 1,
+  "imagen_url": "https://images.unsplash.com/photo-1531525645387-7f14be1bdbbd"
+}
+{
+  "titulo": "Silla Gamer Premium (Agotado)",
+  "descripcion": "Silla con soporte lumbar ajustable y reclinación de 180 grados. Comodidad total.",
+  "precio": 249.99,
+  "stock": 0,
+  "imagen_url": "https://images.unsplash.com/photo-1598550476439-6847785fce6e"
+}
