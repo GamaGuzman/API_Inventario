@@ -1,0 +1,449 @@
+openapi: 3.0.3
+
+info:
+  title: API Inventario
+  description: |
+    API REST para la gestión completa de productos de un inventario.
+
+    Desarrollada con **Python + Flask**, conectada a una base de datos **PostgreSQL**
+    y desplegada mediante **Docker Compose**.
+
+    El frontend en **Angular 19** consume esta API en `http://localhost:5000`
+    para mostrar un catálogo de productos con vistas de lista y detalle.
+
+    ### Tecnologías
+    - **Backend:** Python 3.11 + Flask 3.0.2
+    - **Base de datos:** PostgreSQL 15
+    - **ORM/Driver:** psycopg2
+    - **Servidor de producción:** Gunicorn
+    - **Contenedores:** Docker + Docker Compose
+
+    ### Base de datos — Tabla `productos`
+    | Campo | Tipo | Descripción |
+    |-------|------|-------------|
+    | id | SERIAL PK | Identificador único autogenerado |
+    | titulo | VARCHAR(255) | Nombre del producto (requerido) |
+    | descripcion | TEXT | Descripción detallada (opcional) |
+    | precio | NUMERIC(10,2) | Precio del producto (requerido) |
+    | moneda | VARCHAR(10) | Moneda, default `MXN` |
+    | stock | INT | Unidades disponibles, default `0` |
+    | rating_promedio | NUMERIC(2,1) | Calificación promedio, default `0` |
+    | total_reviews | INT | Total de reseñas recibidas |
+    | imagen_url | TEXT | URL de la imagen (opcional) |
+    | creado_en | TIMESTAMP | Fecha de creación automática |
+
+    ### Notas importantes
+    - Todos los endpoints están bajo el prefijo `/productos`
+    - La compra de productos usa transacciones con bloqueo (`FOR UPDATE`) para evitar condiciones de carrera
+    - No se requiere autenticación en la versión actual
+  version: 1.0.0
+  contact:
+    name: GamaGuzman
+    url: https://github.com/GamaGuzman/API_Inventario
+
+servers:
+  - url: http://localhost:5000
+    description: Servidor de desarrollo local (Docker)
+
+tags:
+  - name: Productos
+    description: Operaciones CRUD y de negocio sobre el catálogo de productos
+
+paths:
+
+  /productos/:
+    get:
+      tags:
+        - Productos
+      summary: Listar todos los productos
+      description: |
+        Retorna la lista completa de productos registrados en la base de datos.
+
+        Devuelve los campos: `id`, `titulo`, `descripcion`, `precio` y `stock`.
+
+        > **Nota:** El frontend Angular usa esta respuesta para renderizar una
+        cuadrícula de tarjetas. Los productos con `stock = 0` se muestran
+        visualmente como **agotados**.
+      operationId: listarProductos
+      responses:
+        '200':
+          description: Lista de productos obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductoLista'
+              examples:
+                con_productos:
+                  summary: Lista con productos
+                  value:
+                    - id: 1
+                      titulo: "Audífonos Inalámbricos Pro"
+                      descripcion: "Audífonos con cancelación de ruido activa y 30 horas de batería."
+                      precio: 89.99
+                      stock: 50
+                    - id: 2
+                      titulo: "Teclado Mecánico RGB"
+                      descripcion: "Teclado layout español con switches tipo Blue."
+                      precio: 45.50
+                      stock: 15
+                    - id: 3
+                      titulo: "Silla Gamer Premium"
+                      descripcion: "Silla con soporte lumbar ajustable y reclinación 180°."
+                      precio: 249.99
+                      stock: 0
+                lista_vacia:
+                  summary: Sin productos registrados
+                  value: []
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Productos
+      summary: Crear un nuevo producto
+      description: |
+        Registra un nuevo producto en la base de datos y retorna el `id` generado.
+
+        ### Campos requeridos
+        - `titulo` — nombre del producto
+        - `precio` — precio numérico
+        - `stock` — unidades disponibles
+
+        ### Campos opcionales
+        - `descripcion` — descripción detallada
+        - `imagen_url` — URL de la imagen del producto
+
+        > **Nota:** Los campos `moneda`, `rating_promedio`, `total_reviews` y
+        `creado_en` son asignados automáticamente por la base de datos con
+        sus valores por defecto.
+      operationId: crearProducto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductoCrear'
+            examples:
+              completo:
+                summary: Producto con todos los campos
+                value:
+                  titulo: "Audífonos Inalámbricos Pro"
+                  descripcion: "Audífonos con cancelación de ruido activa y 30 horas de batería autónoma."
+                  precio: 89.99
+                  stock: 50
+                  imagen_url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e"
+              minimo:
+                summary: Solo campos requeridos
+                value:
+                  titulo: "Producto básico"
+                  precio: 19.99
+                  stock: 10
+      responses:
+        '201':
+          description: Producto creado exitosamente. Retorna el ID asignado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoCreado'
+              example:
+                id: 7
+        '400':
+          description: Datos inválidos o campos requeridos faltantes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Faltan campos requeridos: titulo, precio o stock"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /productos/{id}:
+    delete:
+      tags:
+        - Productos
+      summary: Eliminar un producto
+      description: |
+        Elimina permanentemente un producto del inventario por su `id`.
+
+        > ⚠️ Esta operación es **irreversible**. El producto será borrado
+        de la base de datos definitivamente.
+      operationId: eliminarProducto
+      parameters:
+        - $ref: '#/components/parameters/ProductoId'
+      responses:
+        '200':
+          description: Producto eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensajeResponse'
+              example:
+                mensaje: "Producto con ID 3 eliminado exitosamente"
+        '404':
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Producto no encontrado"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /productos/{id}/comprar:
+    post:
+      tags:
+        - Productos
+      summary: Comprar un producto
+      description: |
+        Procesa la compra de una cantidad determinada de un producto.
+
+        ### Comportamiento
+        1. Busca el producto por `id` con un **bloqueo de fila** (`SELECT FOR UPDATE`)
+           para evitar condiciones de carrera en compras simultáneas.
+        2. Verifica que haya suficiente `stock` para cubrir la `cantidad` solicitada.
+        3. Si hay stock suficiente, descuenta la cantidad del inventario y confirma
+           la transacción.
+        4. Retorna un resumen de la compra con el total pagado y el stock restante.
+
+        ### Transaccionalidad
+        La operación usa una transacción de base de datos con `FOR UPDATE`.
+        Si ocurre cualquier error, se hace **rollback** automático y el stock
+        no se modifica.
+
+        ### Campo `cantidad`
+        - Es **opcional**. Si no se envía, se asume `1`.
+        - Debe ser un entero positivo mayor a `0`.
+      operationId: comprarProducto
+      parameters:
+        - $ref: '#/components/parameters/ProductoId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompraRequest'
+            examples:
+              una_unidad:
+                summary: Comprar 1 unidad (por defecto)
+                value:
+                  cantidad: 1
+              multiples:
+                summary: Comprar múltiples unidades
+                value:
+                  cantidad: 3
+              sin_body:
+                summary: Sin body (asume cantidad = 1)
+                value: {}
+      responses:
+        '200':
+          description: Compra realizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompraResponse'
+              example:
+                mensaje: "Compra realizada con éxito"
+                producto: "Audífonos Inalámbricos Pro"
+                cantidad_comprada: 2
+                stock_restante: 48
+                total_pagado: 179.98
+        '400':
+          description: |
+            Stock insuficiente para cubrir la cantidad solicitada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Stock insuficiente para 'Silla Gamer Premium'. Disponible: 0"
+        '404':
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Producto no encontrado"
+        '500':
+          description: Error interno al procesar la compra (con detalle del error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDetalle'
+              example:
+                error: "Error interno al procesar la compra"
+                detalle: "connection to server lost"
+
+components:
+
+  parameters:
+    ProductoId:
+      name: id
+      in: path
+      required: true
+      description: Identificador único entero del producto (generado automáticamente por la BD)
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+        example: 1
+
+  schemas:
+
+    ProductoLista:
+      type: object
+      description: |
+        Campos que retorna `GET /productos/`. Subconjunto de la tabla,
+        suficiente para renderizar la tarjeta de vista previa en el frontend.
+      properties:
+        id:
+          type: integer
+          description: Identificador único del producto
+          example: 1
+        titulo:
+          type: string
+          description: Nombre del producto
+          example: "Audífonos Inalámbricos Pro"
+        descripcion:
+          type: string
+          nullable: true
+          description: Descripción del producto
+          example: "Audífonos con cancelación de ruido activa y 30 horas de batería."
+        precio:
+          type: number
+          format: float
+          description: Precio del producto
+          example: 89.99
+        stock:
+          type: integer
+          description: Unidades disponibles. Si es 0, el producto aparece como agotado en el frontend.
+          minimum: 0
+          example: 50
+
+    ProductoCrear:
+      type: object
+      description: Cuerpo requerido para crear un nuevo producto
+      required:
+        - titulo
+        - precio
+        - stock
+      properties:
+        titulo:
+          type: string
+          maxLength: 255
+          description: Nombre del producto
+          example: "Audífonos Inalámbricos Pro"
+        descripcion:
+          type: string
+          nullable: true
+          description: Descripción detallada del producto (opcional)
+          example: "Audífonos con cancelación de ruido activa y 30 horas de batería autónoma."
+        precio:
+          type: number
+          format: float
+          description: Precio del producto (hasta 10 dígitos, 2 decimales)
+          example: 89.99
+        stock:
+          type: integer
+          minimum: 0
+          description: Cantidad inicial en inventario
+          example: 50
+        imagen_url:
+          type: string
+          format: uri
+          nullable: true
+          description: URL de la imagen del producto (opcional)
+          example: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e"
+
+    ProductoCreado:
+      type: object
+      description: Respuesta al crear un producto exitosamente
+      properties:
+        id:
+          type: integer
+          description: ID autogenerado por la base de datos para el nuevo producto
+          example: 7
+
+    CompraRequest:
+      type: object
+      description: |
+        Cuerpo de la solicitud de compra. El campo `cantidad` es opcional;
+        si no se envía se asume `1`.
+      properties:
+        cantidad:
+          type: integer
+          minimum: 1
+          default: 1
+          description: Número de unidades a comprar
+          example: 2
+
+    CompraResponse:
+      type: object
+      description: Resumen de la compra procesada exitosamente
+      properties:
+        mensaje:
+          type: string
+          example: "Compra realizada con éxito"
+        producto:
+          type: string
+          description: Título del producto comprado
+          example: "Audífonos Inalámbricos Pro"
+        cantidad_comprada:
+          type: integer
+          description: Cantidad de unidades adquiridas en esta transacción
+          example: 2
+        stock_restante:
+          type: integer
+          description: Unidades que quedan en inventario después de la compra
+          example: 48
+        total_pagado:
+          type: number
+          format: float
+          description: Monto total cobrado (precio × cantidad)
+          example: 179.98
+
+    MensajeResponse:
+      type: object
+      description: Respuesta simple con mensaje de confirmación
+      properties:
+        mensaje:
+          type: string
+          example: "Producto con ID 3 eliminado exitosamente"
+
+    ErrorResponse:
+      type: object
+      description: Respuesta estándar de error
+      properties:
+        error:
+          type: string
+          description: Mensaje descriptivo del error
+          example: "Producto no encontrado"
+
+    ErrorResponseDetalle:
+      type: object
+      description: Respuesta de error con detalle técnico adicional (usado en errores 500 de compra)
+      properties:
+        error:
+          type: string
+          description: Mensaje general del error
+          example: "Error interno al procesar la compra"
+        detalle:
+          type: string
+          description: Detalle técnico del error para depuración
+          example: "connection to server lost"
